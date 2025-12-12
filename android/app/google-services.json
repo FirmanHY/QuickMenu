@@ -1,0 +1,86 @@
+{
+    "project_info": {
+        "project_number": "814042780557",
+        "project_id": "codemi-a1d69",
+        "storage_bucket": "codemi-a1d69.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:814042780557:android:28989eab813a7d334b63c4",
+                "android_client_info": {
+                    "package_name": "com.codemi"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDd3l3OLAUyBA7aD07YBCgTNIBDeCQmLnw"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        },
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:814042780557:android:012fe03ce96b1b264b63c4",
+                "android_client_info": {
+                    "package_name": "com.example.inventory_app"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDd3l3OLAUyBA7aD07YBCgTNIBDeCQmLnw"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        },
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:814042780557:android:8f12383f3e7b93764b63c4",
+                "android_client_info": {
+                    "package_name": "com.inventory.app"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDd3l3OLAUyBA7aD07YBCgTNIBDeCQmLnw"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        },
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:814042780557:android:100909e85972c09b4b63c4",
+                "android_client_info": {
+                    "package_name": "com.quickmenu.android"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDd3l3OLAUyBA7aD07YBCgTNIBDeCQmLnw"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}
