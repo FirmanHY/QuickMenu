@@ -111,31 +111,7 @@
 
 ---
 
-## 📱 Screenshots
 
-### Main Screens
-```
-┌─────────────┬─────────────┬─────────────┬─────────────┐
-│    Home     │   Explore   │ Collection  │   Planner   │
-│             │             │             │             │
-│  Dashboard  │   Browse    │   Library   │   Weekly    │
-│  Daily Menu │   Recipes   │   Search    │   Calendar  │
-│ Inspiration │   Filters   │   Add New   │  Schedule   │
-└─────────────┴─────────────┴─────────────┴─────────────┘
-```
-
-### Recipe Management
-```
-┌─────────────┬─────────────┬─────────────┐
-│   Detail    │  Add Manual │   Import    │
-│             │             │             │
-│  Full View  │    Form     │   Scrape    │
-│  Bookmark   │   Upload    │   Preview   │
-│  Schedule   │    Save     │    Save     │
-└─────────────┴─────────────┴─────────────┘
-```
-
----
 
 ## 🛠 Tech Stack
 
@@ -210,7 +186,7 @@ java -version    # Should be 11+
 
 ### **1. Clone Repository**
 ```bash
-git clone https://github.com/yourusername/quickmenu.git
+git clone https://github.com/FirmanHY/QuickMenu.git
 cd quickmenu
 ```
 
@@ -1111,9 +1087,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👨‍💻 Author
 
 **Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [Your Name](https://linkedin.com/in/yourprofile)
-- Email: your.email@example.com
+- Email: yudistia.firman@gmail.com
 
 ---
 
@@ -1133,6 +1107,6 @@ For support, email your.email@example.com or open an issue in the repository.
 
 ---
 
-**Made with ❤️ and ☕ by [Your Name]**
+**Made with ❤️ and ☕ by Firman Yudistia**
 
 *Last Updated: December 17, 2025
