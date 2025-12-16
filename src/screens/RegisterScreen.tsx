@@ -10,7 +10,7 @@ import {
     StatusBar
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import Toast from "react-native-simple-toast"; // <--- Pakai Simple Toast
+import Toast from "react-native-simple-toast";
 import { NavigationProps } from "../navigation/types";
 import CustomInput from "../components/CustomInput";
 import CustomButton from "../components/CustomButton";
@@ -98,13 +98,6 @@ const RegisterScreen = () => {
                 await signUp(email, password, fullName);
 
                 Toast.show("Registrasi Berhasil! Mengalihkan...", Toast.LONG);
-
-                setTimeout(() => {
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: "Login" }] // Atau ke Home jika auto-login
-                    });
-                }, 1000);
             } catch (error: any) {
                 let errorMsg = "Terjadi kesalahan saat registrasi.";
                 if (error.code === "auth/email-already-in-use") {

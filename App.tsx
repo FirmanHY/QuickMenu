@@ -3,6 +3,7 @@ import { StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { COLORS } from "./src/constants/colors";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const App = (): React.JSX.Element => {
     return (
@@ -12,6 +13,7 @@ const App = (): React.JSX.Element => {
                 backgroundColor={COLORS.white}
                 translucent={false}
             />
+
             <AppNavigator />
         </SafeAreaProvider>
     );

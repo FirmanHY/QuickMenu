@@ -23,10 +23,14 @@ export const signUp = async (email: string, pass: string, fullName: string) => {
             createdAt: Date.now()
         };
 
-        await firestore().collection("users").doc(user.uid).set(userData);
+        await firestore()
+            .collection("users")
+            .doc(user.uid)
+            .set(userData, { merge: true });
 
         return user;
     } catch (error: any) {
+        console.error("SignUp Error:", error);
         throw error;
     }
 };
@@ -39,6 +43,7 @@ export const signIn = async (email: string, pass: string) => {
         );
         return userCredential.user;
     } catch (error: any) {
+        console.error("SignIn Error:", error);
         throw error;
     }
 };
@@ -47,11 +52,17 @@ export const signOut = async () => {
     try {
         await auth().signOut();
     } catch (error) {
-        console.error(error);
+        console.error("SignOut Error:", error);
+        throw error;
     }
 };
 
 export const getUserProfile = async (uid: string) => {
-    const doc = await firestore().collection("users").doc(uid).get();
-    return doc.exists ? (doc.data() as UserData) : null;
+    try {
+        const doc = await firestore().collection("users").doc(uid).get();
+        return doc.data();
+    } catch (error) {
+        console.error("Get User Profile Error:", error);
+        throw error;
+    }
 };

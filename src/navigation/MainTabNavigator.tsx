@@ -6,22 +6,9 @@ import { COLORS } from "../constants/colors";
 import { FONTS } from "../constants/fonts";
 import { ms, vs } from "../utils/responsive";
 import HomeScreen from "../screens/HomeScreen";
-
-const CollectionScreen = () => (
-    <View style={styles.center}>
-        <Text>Halaman Koleksi</Text>
-    </View>
-);
-const ExploreScreen = () => (
-    <View style={styles.center}>
-        <Text>Halaman Eksplor</Text>
-    </View>
-);
-const PlannerScreen = () => (
-    <View style={styles.center}>
-        <Text>Halaman Perencana</Text>
-    </View>
-);
+import CollectionScreen from "../screens/CollectionScreen";
+import ExploreScreen from "../screens/EksplorScreen"; // Pastikan path sesuai
+import PlannerScreen from "../screens/PlannerScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -29,7 +16,22 @@ const MainTabNavigator = () => {
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
-                headerShown: false,
+                headerShown: true,
+                headerStyle: {
+                    backgroundColor: COLORS.white,
+                    elevation: 0,
+                    shadowOpacity: 0
+                },
+                headerTitleStyle: {
+                    ...FONTS.bold,
+                    fontSize: ms(20),
+                    color: COLORS.black
+                },
+                headerTitleAlign: "left",
+                headerLeftContainerStyle: {
+                    paddingLeft: ms(16)
+                },
+
                 tabBarShowLabel: true,
                 tabBarActiveTintColor: COLORS.primary,
                 tabBarInactiveTintColor: COLORS.gray900,
@@ -83,10 +85,29 @@ const MainTabNavigator = () => {
                 }
             })}
         >
-            <Tab.Screen name="Beranda" component={HomeScreen} />
-            <Tab.Screen name="Koleksi" component={CollectionScreen} />
-            <Tab.Screen name="Eksplor" component={ExploreScreen} />
-            <Tab.Screen name="Perencana" component={PlannerScreen} />
+            <Tab.Screen
+                name="Beranda"
+                component={HomeScreen}
+                options={{ headerShown: false }}
+            />
+
+            <Tab.Screen
+                name="Koleksi"
+                component={CollectionScreen}
+                options={{ title: "Koleksi Saya" }}
+            />
+
+            <Tab.Screen
+                name="Eksplor"
+                component={ExploreScreen}
+                options={{ title: "Eksplor Resep" }}
+            />
+
+            <Tab.Screen
+                name="Perencana"
+                component={PlannerScreen}
+                options={{ title: "Perencana Menu" }}
+            />
         </Tab.Navigator>
     );
 };
