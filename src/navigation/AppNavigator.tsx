@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, Image, Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import auth from "@react-native-firebase/auth";
@@ -8,7 +8,7 @@ import { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { RootStackParamList } from "./types";
 import { COLORS } from "../constants/colors";
 import { FONTS } from "../constants/fonts";
-import { ms } from "../utils/responsive";
+import { ms, vs } from "../utils/responsive";
 
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
@@ -17,6 +17,8 @@ import AddRecipeManualScreen from "../screens/AddRecipeManualScreen";
 import RecipeDetailScreen from "../screens/RecipeDetailScreen";
 import EditRecipeScreen from "../screens/EditRecipeScreen";
 import ImportPreviewScreen from "../screens/ImportPreviewScreen";
+import QuickMenuLogo from "../assets/quick_menu_icon.png"
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -29,7 +31,9 @@ const SplashScreen = () => (
             backgroundColor: COLORS.white
         }}
     >
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Image source={QuickMenuLogo} style={{width:ms(100),height:ms(100)}}/>
+        <Text style={{...FONTS.bold,fontSize:40}}>QuickMenu</Text>
+        <Text style={{...FONTS.bold,fontSize:24}}>Asisten Resep Cerdas Anda</Text>
     </View>
 );
 

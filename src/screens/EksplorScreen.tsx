@@ -143,7 +143,7 @@ const ExploreScreen = () => {
         isBookmarked: boolean
     ) => {
         try {
-            await toggleBookmark(recipeId, isBookmarked);
+            await toggleBookmark(recipeId, !isBookmarked);
 
             setRecipes((prev) =>
                 prev.map((recipe) =>

@@ -147,7 +147,7 @@ const RecipeDetailScreen = () => {
         try {
             const newStatus = !isBookmarked;
             setIsBookmarked(newStatus);
-            await toggleBookmark(recipe.id, !newStatus);
+            await toggleBookmark(recipe.id, newStatus);
             if (newStatus) {
                 Toast.show("Disimpan ke Koleksi", Toast.SHORT);
             } else {
