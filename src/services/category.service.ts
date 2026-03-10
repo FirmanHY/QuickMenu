@@ -1,5 +1,5 @@
 // services/category.service.ts
-import firestore from "@react-native-firebase/firestore";
+import database from "@react-native-firebase/database";
 import auth from "@react-native-firebase/auth";
 
 export interface Category {
@@ -19,18 +19,23 @@ export interface Category {
 // Get all default categories
 export const getDefaultCategories = async (): Promise<Category[]> => {
     try {
-        const snapshot = await firestore()
-            .collection("categories")
-            .orderBy("order", "asc")
-            .get();
+        // RTDB: ambil semua dari path categories/, lalu sort by order
+        const snapshot = await database()
+            .ref("categories")
+            .orderByChild("order")
+            .once("value");
 
         const categories: Category[] = [];
-        snapshot.forEach((doc) => {
-            categories.push({
-                id: doc.id,
-                ...doc.data()
-            } as Category);
-        });
+
+        if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+                categories.push({
+                    id: child.key!,
+                    ...child.val()
+                });
+                return undefined;
+            });
+        }
 
         return categories;
     } catch (error) {
@@ -52,6 +57,7 @@ export const createUserCategory = async (
         if (!currentUser) {
             throw new Error("User tidak terautentikasi");
         }
+
         const id = name.toLowerCase().replace(/\s+/g, "-");
 
         const categoryData = {
@@ -64,11 +70,9 @@ export const createUserCategory = async (
             createdAt: Date.now()
         };
 
-        await firestore()
-            .collection("user_categories")
-            .doc(currentUser.uid)
-            .collection("categories")
-            .doc(id)
+        // RTDB: simpan di path user_categories/{uid}/{categoryId}
+        await database()
+            .ref(`user_categories/${currentUser.uid}/${id}`)
             .set(categoryData);
 
         return categoryData;
@@ -86,20 +90,26 @@ export const getUserCategories = async (): Promise<Category[]> => {
             throw new Error("User tidak terautentikasi");
         }
 
-        const snapshot = await firestore()
-            .collection("user_categories")
-            .doc(currentUser.uid)
-            .collection("categories")
-            .orderBy("createdAt", "desc")
-            .get();
+        // RTDB: ambil semua dari path user_categories/{uid}
+        const snapshot = await database()
+            .ref(`user_categories/${currentUser.uid}`)
+            .orderByChild("createdAt")
+            .once("value");
 
         const categories: Category[] = [];
-        snapshot.forEach((doc) => {
-            categories.push({
-                id: doc.id,
-                ...doc.data()
-            } as Category);
-        });
+
+        if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+                categories.push({
+                    id: child.key!,
+                    ...child.val()
+                });
+                return undefined;
+            });
+        }
+
+        // Reverse supaya yang terbaru di atas (orderByChild ascending)
+        categories.reverse();
 
         return categories;
     } catch (error) {
@@ -131,12 +141,10 @@ export const deleteUserCategory = async (categoryId: string): Promise<void> => {
             throw new Error("User tidak terautentikasi");
         }
 
-        await firestore()
-            .collection("user_categories")
-            .doc(currentUser.uid)
-            .collection("categories")
-            .doc(categoryId)
-            .delete();
+        // RTDB: hapus dengan remove()
+        await database()
+            .ref(`user_categories/${currentUser.uid}/${categoryId}`)
+            .remove();
     } catch (error) {
         console.error("Error deleting user category:", error);
         throw error;
@@ -154,11 +162,9 @@ export const updateUserCategory = async (
             throw new Error("User tidak terautentikasi");
         }
 
-        await firestore()
-            .collection("user_categories")
-            .doc(currentUser.uid)
-            .collection("categories")
-            .doc(categoryId)
+        // RTDB: update partial data
+        await database()
+            .ref(`user_categories/${currentUser.uid}/${categoryId}`)
             .update(data);
     } catch (error) {
         console.error("Error updating user category:", error);

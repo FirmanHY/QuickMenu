@@ -37,10 +37,11 @@ import ScheduleRecipeSheetContent from "../components/ScheduleRecipeSheetContent
 
 
 import {
-    getRecipeById,
+
     toggleBookmark,
     updateUserRecipe,
-    Recipe
+    Recipe,
+    getRecipeDetail
 } from "../services/recipe.service";
 import {
     createUserCategory,
@@ -125,7 +126,7 @@ const RecipeDetailScreen = () => {
     const loadRecipeData = async () => {
         try {
             if (!recipe) setIsLoading(true);
-            const data = await getRecipeById(recipeId);
+            const data = await getRecipeDetail(recipeId);
             if (data) {
                 setRecipe(data);
                 setIsBookmarked(!!data.isBookmarked);

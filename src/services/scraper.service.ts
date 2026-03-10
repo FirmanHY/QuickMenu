@@ -1,7 +1,7 @@
-// services/scraper.service.ts (React Native)
+
 import axios from "axios";
 
-const API_BASE_URL = "http://172.16.0.14:3000"; // Android Emulator
+const API_BASE_URL = "http://172.16.0.2:3000";
 
 export interface ScrapedRecipe {
     title: string;

@@ -1,5 +1,5 @@
+import database from "@react-native-firebase/database";
 import auth from "@react-native-firebase/auth";
-import firestore from "@react-native-firebase/firestore";
 
 export interface UserData {
     uid: string;
@@ -23,10 +23,10 @@ export const signUp = async (email: string, pass: string, fullName: string) => {
             createdAt: Date.now()
         };
 
-        await firestore()
-            .collection("users")
-            .doc(user.uid)
-            .set(userData, { merge: true });
+        // RTDB: set data langsung di path users/{uid}
+        await database()
+            .ref(`users/${user.uid}`)
+            .set(userData);
 
         return user;
     } catch (error: any) {
@@ -59,8 +59,12 @@ export const signOut = async () => {
 
 export const getUserProfile = async (uid: string) => {
     try {
-        const doc = await firestore().collection("users").doc(uid).get();
-        return doc.data();
+        // RTDB: ambil data dari path users/{uid}
+        const snapshot = await database()
+            .ref(`users/${uid}`)
+            .once("value");
+
+        return snapshot.val();
     } catch (error) {
         console.error("Get User Profile Error:", error);
         throw error;

@@ -24,9 +24,10 @@ import CustomInput from "../components/CustomInput";
 import RichTextEditor from "../components/RichTextEditor";
 import CustomButton from "../components/CustomButton";
 import {
-    getRecipeById,
+
     updateUserRecipe,
-    Recipe
+    Recipe,
+    getRecipeDetail
 } from "../services/recipe.service";
 
 import { RootStackParamList } from "../navigation/types";
@@ -65,7 +66,7 @@ const EditRecipeScreen = () => {
     const loadRecipeData = async () => {
         try {
             setIsLoading(true);
-            const data = await getRecipeById(recipeId);
+            const data = await getRecipeDetail(recipeId);
 
             if (data) {
                 setTitle(data.title);

@@ -1,4 +1,4 @@
-import firestore from "@react-native-firebase/firestore";
+import database from "@react-native-firebase/database";
 import auth from "@react-native-firebase/auth";
 import {
     uploadImageToCloudinary,
@@ -41,6 +41,9 @@ export interface CreateRecipeData {
     originalUrl?: string;
 }
 
+// ==================== USER CUSTOM RECIPES ====================
+
+// Create user's custom recipe
 export const createUserRecipe = async (
     data: CreateRecipeData
 ): Promise<Recipe> => {
@@ -50,8 +53,10 @@ export const createUserRecipe = async (
             throw new Error("User tidak terautentikasi");
         }
 
-        let imageUrl: string | null = null;
-        let imagePublicId: string | null = null;
+        let imageUrl: string | undefined;
+        let imagePublicId: string | undefined;
+
+        // Upload image ke Cloudinary kalau ada
         if (data.imageUri) {
             const uploadResult = await uploadImageToCloudinary(
                 data.imageUri,
@@ -61,8 +66,12 @@ export const createUserRecipe = async (
             imagePublicId = uploadResult.public_id;
         }
 
+        // RTDB: generate key baru pakai push()
+        const newRef = database()
+            .ref(`user_recipes/${currentUser.uid}`)
+            .push();
 
-        const recipeData = {
+        const recipeData: Omit<Recipe, "id" | "isBookmarked"> = {
             userId: currentUser.uid,
             title: data.title,
             duration: data.duration,
@@ -70,101 +79,26 @@ export const createUserRecipe = async (
             steps: data.steps,
             imageUrl,
             imagePublicId,
-            categories: data.categories || [],
+            categories: data.categories,
             source: data.source || "Manual",
-            originalUrl: data.originalUrl || "",
-
             createdAt: Date.now(),
             updatedAt: Date.now()
         };
 
-        const docRef = await firestore()
-            .collection("user_recipes")
-            .add(recipeData);
+        await newRef.set(recipeData);
 
         return {
-            id: docRef.id,
-            ...recipeData
-        } as Recipe;
+            id: newRef.key!,
+            ...recipeData,
+            isBookmarked: false
+        };
     } catch (error) {
         console.error("Error creating user recipe:", error);
         throw error;
     }
 };
 
-// recipe.service.ts
-
-export const getRecipeById = async (
-    recipeId: string
-): Promise<Recipe | null> => {
-    try {
-        const currentUser = auth().currentUser;
-
-      
-        let isRealTimeBookmarked = false;
-        if (currentUser) {
-            const bookmarkRef = firestore()
-                .collection("user_bookmarks")
-                .doc(currentUser.uid)
-                .collection("bookmarks")
-                .doc(recipeId);
-
-            const snapshot = await bookmarkRef.get();
-
-            isRealTimeBookmarked = snapshot.data() !== undefined;
-        }
-
-        // ---------------------------------------------------------
-        // 1. Cek di User Recipes (Custom/Imported/Edited)
-        // ---------------------------------------------------------
-        try {
-            const userDoc = await firestore()
-                .collection("user_recipes")
-                .doc(recipeId)
-                .get();
-
-            if (userDoc.exists) {
-                const data = userDoc.data();
-                return {
-                    id: userDoc.id,
-                    ...data,
-                    source: data?.source || "Manual",
-
-                   
-                    isBookmarked: isRealTimeBookmarked
-                } as Recipe;
-            }
-        } catch (error: any) {
-            if (error.code !== "firestore/permission-denied") {
-                throw error;
-            }
-        }
-
-      
-        const publicDoc = await firestore()
-            .collection("recipes")
-            .doc(recipeId)
-            .get();
-
-        if (publicDoc.exists) {
-            return {
-                id: publicDoc.id,
-                ...publicDoc.data(),
-                source: "QuickMenu",
-
-            
-                isBookmarked: isRealTimeBookmarked
-            } as Recipe;
-        }
-
-        return null;
-    } catch (error) {
-        console.error("Error getting recipe details:", error);
-        throw error;
-    }
-};
-
-
+// Get user's custom recipes
 export const getUserCustomRecipes = async (): Promise<Recipe[]> => {
     try {
         const currentUser = auth().currentUser;
@@ -172,20 +106,27 @@ export const getUserCustomRecipes = async (): Promise<Recipe[]> => {
             throw new Error("User tidak terautentikasi");
         }
 
-        const snapshot = await firestore()
-            .collection("user_recipes")
-            .where("userId", "==", currentUser.uid)
-            .orderBy("createdAt", "desc")
-            .get();
+        // RTDB: ambil semua recipes milik user dari path user_recipes/{uid}
+        const snapshot = await database()
+            .ref(`user_recipes/${currentUser.uid}`)
+            .orderByChild("createdAt")
+            .once("value");
 
         const recipes: Recipe[] = [];
-        snapshot.forEach((doc) => {
-            recipes.push({
-                id: doc.id,
-                ...doc.data(),
-                isBookmarked: false
-            } as Recipe);
-        });
+
+        if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+                recipes.push({
+                    id: child.key!,
+                    ...child.val(),
+                    isBookmarked: false
+                });
+                return undefined; // RTDB forEach butuh return
+            });
+        }
+
+        // Sort descending (RTDB orderByChild ascending by default)
+        recipes.reverse();
 
         return recipes;
     } catch (error) {
@@ -204,21 +145,35 @@ export const getUserRecipesByCategory = async (
             throw new Error("User tidak terautentikasi");
         }
 
-        const snapshot = await firestore()
-            .collection("user_recipes")
-            .where("userId", "==", currentUser.uid)
-            .where("categories", "array-contains", categoryId)
-            .orderBy("createdAt", "desc")
-            .get();
+        // RTDB: tidak support array-contains, jadi fetch semua lalu filter client-side
+        const snapshot = await database()
+            .ref(`user_recipes/${currentUser.uid}`)
+            .orderByChild("createdAt")
+            .once("value");
 
         const recipes: Recipe[] = [];
-        snapshot.forEach((doc) => {
-            recipes.push({
-                id: doc.id,
-                ...doc.data(),
-                isBookmarked: false
-            } as Recipe);
-        });
+
+        if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+                const data = child.val();
+                // Filter: cek apakah categories array mengandung categoryId
+                if (
+                    data.categories &&
+                    Array.isArray(data.categories) &&
+                    data.categories.includes(categoryId)
+                ) {
+                    recipes.push({
+                        id: child.key!,
+                        ...data,
+                        isBookmarked: false
+                    });
+                }
+                return undefined;
+            });
+        }
+
+        // Sort descending
+        recipes.reverse();
 
         return recipes;
     } catch (error) {
@@ -243,7 +198,7 @@ export const updateUserRecipe = async (
             updatedAt: Date.now()
         };
 
-     
+        // Upload image baru kalau ada
         if (data.imageUri) {
             const uploadResult = await uploadImageToCloudinary(
                 data.imageUri,
@@ -254,9 +209,9 @@ export const updateUserRecipe = async (
             delete updateData.imageUri;
         }
 
-        await firestore()
-            .collection("user_recipes")
-            .doc(recipeId)
+        // RTDB: update di path user_recipes/{uid}/{recipeId}
+        await database()
+            .ref(`user_recipes/${currentUser.uid}/${recipeId}`)
             .update(updateData);
     } catch (error) {
         console.error("Error updating user recipe:", error);
@@ -272,24 +227,26 @@ export const deleteUserRecipe = async (recipeId: string): Promise<void> => {
             throw new Error("User tidak terautentikasi");
         }
 
-        const doc = await firestore()
-            .collection("user_recipes")
-            .doc(recipeId)
-            .get();
+        // RTDB: ambil data dulu untuk cek imagePublicId
+        const snapshot = await database()
+            .ref(`user_recipes/${currentUser.uid}/${recipeId}`)
+            .once("value");
 
-        if (!doc.exists) {
+        if (!snapshot.exists()) {
             throw new Error("Resep tidak ditemukan");
         }
 
-        const recipe = doc.data() as Recipe;
+        const recipe = snapshot.val() as Recipe;
 
-  
+        // Hapus image dari Cloudinary kalau ada
         if (recipe.imagePublicId) {
             await deleteImageFromCloudinary(recipe.imagePublicId);
         }
 
-   
-        await firestore().collection("user_recipes").doc(recipeId).delete();
+        // RTDB: hapus dengan set null atau remove()
+        await database()
+            .ref(`user_recipes/${currentUser.uid}/${recipeId}`)
+            .remove();
     } catch (error) {
         console.error("Error deleting user recipe:", error);
         throw error;
@@ -306,31 +263,40 @@ export const getQuickMenuRecipes = async (): Promise<Recipe[]> => {
             throw new Error("User tidak terautentikasi");
         }
 
-        const snapshot = await firestore()
-            .collection("recipes")
-            .orderBy("createdAt", "desc")
-            .get();
+        // RTDB: ambil semua public recipes
+        const snapshot = await database()
+            .ref("recipes")
+            .orderByChild("createdAt")
+            .once("value");
 
-        // Get user's bookmarks
-        const bookmarksSnapshot = await firestore()
-            .collection("user_bookmarks")
-            .doc(currentUser.uid)
-            .collection("bookmarks")
-            .get();
+        // Ambil bookmarks user
+        const bookmarksSnapshot = await database()
+            .ref(`user_bookmarks/${currentUser.uid}`)
+            .once("value");
 
         const bookmarkedIds = new Set<string>();
-        bookmarksSnapshot.forEach((doc) => {
-            bookmarkedIds.add(doc.data().recipeId);
-        });
+        if (bookmarksSnapshot.exists()) {
+            bookmarksSnapshot.forEach((child) => {
+                bookmarkedIds.add(child.val().recipeId);
+                return undefined;
+            });
+        }
 
         const recipes: Recipe[] = [];
-        snapshot.forEach((doc) => {
-            recipes.push({
-                id: doc.id,
-                ...doc.data(),
-                isBookmarked: bookmarkedIds.has(doc.id)
-            } as Recipe);
-        });
+
+        if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+                recipes.push({
+                    id: child.key!,
+                    ...child.val(),
+                    isBookmarked: bookmarkedIds.has(child.key!)
+                });
+                return undefined;
+            });
+        }
+
+        // Sort descending
+        recipes.reverse();
 
         return recipes;
     } catch (error) {
@@ -347,40 +313,42 @@ export const getBookmarkedRecipes = async (): Promise<Recipe[]> => {
             throw new Error("User tidak terautentikasi");
         }
 
-        // Get user's bookmarks
-        const bookmarksSnapshot = await firestore()
-            .collection("user_bookmarks")
-            .doc(currentUser.uid)
-            .collection("bookmarks")
-            .orderBy("bookmarkedAt", "desc")
-            .get();
+        // RTDB: ambil semua bookmarks user
+        const bookmarksSnapshot = await database()
+            .ref(`user_bookmarks/${currentUser.uid}`)
+            .orderByChild("bookmarkedAt")
+            .once("value");
 
         const recipeIds: string[] = [];
-        bookmarksSnapshot.forEach((doc) => {
-            recipeIds.push(doc.data().recipeId);
-        });
+        if (bookmarksSnapshot.exists()) {
+            bookmarksSnapshot.forEach((child) => {
+                recipeIds.push(child.val().recipeId);
+                return undefined;
+            });
+        }
+
+        // Reverse supaya yang terbaru di atas
+        recipeIds.reverse();
 
         if (recipeIds.length === 0) {
             return [];
         }
 
+        // RTDB: tidak support "in" query, jadi fetch satu-satu
         const recipes: Recipe[] = [];
-        const batchSize = 10;
 
-        for (let i = 0; i < recipeIds.length; i += batchSize) {
-            const batch = recipeIds.slice(i, i + batchSize);
-            const snapshot = await firestore()
-                .collection("recipes")
-                .where(firestore.FieldPath.documentId(), "in", batch)
-                .get();
+        for (const recipeId of recipeIds) {
+            const recipeSnapshot = await database()
+                .ref(`recipes/${recipeId}`)
+                .once("value");
 
-            snapshot.forEach((doc) => {
+            if (recipeSnapshot.exists()) {
                 recipes.push({
-                    id: doc.id,
-                    ...doc.data(),
+                    id: recipeSnapshot.key!,
+                    ...recipeSnapshot.val(),
                     isBookmarked: true
-                } as Recipe);
-            });
+                });
+            }
         }
 
         return recipes;
@@ -390,48 +358,60 @@ export const getBookmarkedRecipes = async (): Promise<Recipe[]> => {
     }
 };
 
-
+// Get healthy recipes (untuk home screen)
 export const getHealthyRecipes = async (): Promise<Recipe[]> => {
     try {
         const currentUser = auth().currentUser;
         if (!currentUser) throw new Error("User tidak terautentikasi");
 
-        const snapshot = await firestore()
-            .collection("recipes")
-            .where("categories", "array-contains", "healthy")
-            .limit(10) // Batasi 10 aja biar ringan
-            .get();
+        // RTDB: tidak support array-contains, fetch semua lalu filter client-side
+        const snapshot = await database()
+            .ref("recipes")
+            .once("value");
 
-
-        const bookmarksSnapshot = await firestore()
-            .collection("user_bookmarks")
-            .doc(currentUser.uid)
-            .collection("bookmarks")
-            .get();
+        // Ambil bookmarks
+        const bookmarksSnapshot = await database()
+            .ref(`user_bookmarks/${currentUser.uid}`)
+            .once("value");
 
         const bookmarkedIds = new Set<string>();
-        bookmarksSnapshot.forEach((doc) => {
-            bookmarkedIds.add(doc.data().recipeId);
-        });
+        if (bookmarksSnapshot.exists()) {
+            bookmarksSnapshot.forEach((child) => {
+                bookmarkedIds.add(child.val().recipeId);
+                return undefined;
+            });
+        }
 
         const recipes: Recipe[] = [];
-        snapshot.forEach((doc) => {
-            recipes.push({
-                id: doc.id,
-                ...doc.data(),
-                isBookmarked: bookmarkedIds.has(doc.id)
-            } as Recipe);
-        });
 
-        return recipes;
+        if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+                const data = child.val();
+                // Filter: hanya yang punya category "healthy"
+                if (
+                    data.categories &&
+                    Array.isArray(data.categories) &&
+                    data.categories.includes("healthy")
+                ) {
+                    recipes.push({
+                        id: child.key!,
+                        ...data,
+                        isBookmarked: bookmarkedIds.has(child.key!)
+                    });
+                }
+                return undefined;
+            });
+        }
+
+        // Limit 10
+        return recipes.slice(0, 10);
     } catch (error) {
         console.error("Error getting healthy recipes:", error);
-    
         return [];
     }
 };
 
-
+// Toggle bookmark
 export const toggleBookmark = async (
     recipeId: string,
     shouldBookmark: boolean
@@ -440,11 +420,8 @@ export const toggleBookmark = async (
         const currentUser = auth().currentUser;
         if (!currentUser) throw new Error("User tidak terautentikasi");
 
-        const bookmarkRef = firestore()
-            .collection("user_bookmarks")
-            .doc(currentUser.uid)
-            .collection("bookmarks")
-            .doc(recipeId);
+        const bookmarkRef = database()
+            .ref(`user_bookmarks/${currentUser.uid}/${recipeId}`);
 
         if (shouldBookmark) {
             await bookmarkRef.set({
@@ -452,7 +429,8 @@ export const toggleBookmark = async (
                 bookmarkedAt: Date.now()
             });
         } else {
-            await bookmarkRef.delete();
+            // RTDB: hapus dengan remove()
+            await bookmarkRef.remove();
         }
     } catch (error) {
         console.error("Error toggling bookmark:", error);
@@ -460,6 +438,58 @@ export const toggleBookmark = async (
     }
 };
 
+// ==================== RECIPE DETAIL ====================
+
+// Get recipe detail (cek user_recipes dulu, lalu public recipes)
+export const getRecipeDetail = async (
+    recipeId: string
+): Promise<Recipe | null> => {
+    try {
+        const currentUser = auth().currentUser;
+        if (!currentUser) throw new Error("User tidak terautentikasi");
+
+        // Cek bookmark status
+        const bookmarkSnapshot = await database()
+            .ref(`user_bookmarks/${currentUser.uid}/${recipeId}`)
+            .once("value");
+
+        const isRealTimeBookmarked = bookmarkSnapshot.exists();
+
+        // 1. Cek di user_recipes (Custom/Imported/Edited)
+        const userRecipeSnapshot = await database()
+            .ref(`user_recipes/${currentUser.uid}/${recipeId}`)
+            .once("value");
+
+        if (userRecipeSnapshot.exists()) {
+            const data = userRecipeSnapshot.val();
+            return {
+                id: userRecipeSnapshot.key!,
+                ...data,
+                source: data?.source || "Manual",
+                isBookmarked: isRealTimeBookmarked
+            } as Recipe;
+        }
+
+        // 2. Cek di public recipes
+        const publicSnapshot = await database()
+            .ref(`recipes/${recipeId}`)
+            .once("value");
+
+        if (publicSnapshot.exists()) {
+            return {
+                id: publicSnapshot.key!,
+                ...publicSnapshot.val(),
+                source: "QuickMenu",
+                isBookmarked: isRealTimeBookmarked
+            } as Recipe;
+        }
+
+        return null;
+    } catch (error) {
+        console.error("Error getting recipe details:", error);
+        throw error;
+    }
+};
 
 // ==================== COMBINED COLLECTIONS ====================
 
@@ -471,7 +501,6 @@ export const getAllUserRecipes = async (): Promise<Recipe[]> => {
             getBookmarkedRecipes()
         ]);
 
-  
         const allRecipes = [...customRecipes, ...bookmarkedRecipes];
         allRecipes.sort((a, b) => {
             const aTime = a.updatedAt || a.createdAt;

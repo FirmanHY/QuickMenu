@@ -119,7 +119,7 @@
 - React Native 0.73.x
 - TypeScript 5.x
 - React Navigation 6.x
-- React Native Firebase (Auth, Firestore)
+- React Native Firebase (Auth, Realtime Database)
 - React Native Render HTML
 - React Native Vector Icons
 - React Native Image Picker
@@ -141,7 +141,7 @@
 
 ### **Database & Services**
 ```
-- Firebase Firestore (NoSQL Database)
+- Firebase Realtime Database (NoSQL JSON Database)
 - Firebase Authentication
 - Cloudinary (Image CDN & Storage)
 ```
@@ -227,81 +227,65 @@ npm install
 2. Enable **Email/Password**
 3. Enable **Google** (add SHA-1/SHA-256 for Android)
 
-#### C. Create Firestore Database
-1. Go to **Firestore Database**
-2. Click **Create database**
-3. Start in **production mode**
-4. Select region: `asia-southeast1`
+#### C. Create Realtime Database
+1. Go to **Realtime Database**
+2. Click **Create Database**
+3. Select region: `asia-southeast1` (Singapore)
+4. Start in **locked mode**
 
-#### D. Setup Firestore Rules
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Users
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Public Recipes
-    match /recipes/{recipeId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-    
-    // User Custom Recipes
-    match /user_recipes/{recipeId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-    }
-    
-    // User Bookmarks
-    match /user_bookmarks/{userId}/bookmarks/{bookmarkId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Categories
-    match /categories/{categoryId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-    
-    // User Custom Categories
-    match /user_categories/{userId}/categories/{categoryId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Meal Plans
-    match /meal_plans/{userId}/plans/{planId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+#### D. Setup Realtime Database Rules
+Go to **Realtime Database** → **Rules** tab, and paste:
+```json
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "recipes": {
+      ".read": "auth != null",
+      ".write": false,
+      ".indexOn": ["createdAt"]
+    },
+    "user_recipes": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".indexOn": ["createdAt"]
+      }
+    },
+    "user_bookmarks": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".indexOn": ["bookmarkedAt"]
+      }
+    },
+    "categories": {
+      ".read": "auth != null",
+      ".write": false,
+      ".indexOn": ["order"]
+    },
+    "user_categories": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".indexOn": ["createdAt"]
+      }
+    },
+    "user_meal_plans": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
     }
   }
 }
 ```
 
-#### E. Create Firestore Indexes
-
-**Required Composite Index:**
-```
-Collection: user_recipes
-Fields:
-  - userId (Ascending)
-  - createdAt (Descending)
-```
-
-**How to Create:**
-1. Run the app and trigger the query
-2. Click the index creation link in error message
-3. Wait 5-15 minutes for index to build
-
-OR manually create via Firebase Console:
-```
-Firestore → Indexes → Composite → Create Index
-```
-
-#### F. Download Firebase Config Files
+#### E. Download Firebase Config Files
 
 **For Android:**
 1. Project Settings → Your Apps → Android
@@ -605,230 +589,174 @@ Content-Type: application/json
 
 ## 🔥 Firebase Setup Details
 
-### **Firestore Collections Structure**
+### **Realtime Database Structure**
 
-#### **1. `recipes` (QuickMenu Public Recipes)**
-```typescript
-{
-  id: string;              // Auto-generated
-  title: string;
-  duration: string;        // Format: "30 Min"
-  ingredients: string;     // HTML format
-  steps: string;          // HTML format
-  imageUrl: string;
-  categories: string[];   // ["breakfast", "healthy"]
-  source: "QuickMenu";
-  createdBy: "admin";
-  createdAt: number;      // Timestamp
-}
 ```
-
-**Example Document:**
-```json
-{
-  "title": "Smoothie Bowl Sehat",
-  "duration": "10",
-  "ingredients": "<ul><li>Pisang 2 buah</li><li>Yogurt 200ml</li></ul>",
-  "steps": "<ol><li>Blender semua bahan</li><li>Tuang ke mangkuk</li></ol>",
-  "imageUrl": "https://res.cloudinary.com/...",
-  "categories": ["breakfast", "healthy"],
-  "source": "QuickMenu",
-  "createdBy": "admin",
-  "createdAt": 1734393600000
-}
-```
-
----
-
-#### **2. `user_recipes` (User Custom Recipes)**
-```typescript
-{
-  id: string;
-  userId: string;         // User who created
-  title: string;
-  duration: string;
-  ingredients: string;
-  steps: string;
-  imageUrl: string | null;
-  imagePublicId: string;  // Cloudinary ID
-  categories: string[];
-  source: "Manual" | "Instagram" | "Web" | "TikTok" | "Youtube";
-  originalUrl?: string;   // If imported from link
-  createdAt: number;
-  updatedAt: number;
-}
-```
-
----
-
-#### **3. `user_bookmarks/{userId}/bookmarks/{recipeId}`**
-```typescript
-{
-  recipeId: string;       // Reference to recipes collection
-  bookmarkedAt: number;   // Timestamp
-}
-```
-
----
-
-#### **4. `categories` (Default Categories)**
-```typescript
-{
-  id: string;             // "breakfast", "lunch", etc.
-  name: string;           // "Breakfast"
-  displayName: string;    // "Sarapan"
-  icon: string;           // "☀️"
-  order: number;          // Display order
-  isDefault: boolean;
-  createdAt: number;
-}
-```
-
-**Example Documents:**
-```json
-// Document ID: breakfast
-{
-  "id": "breakfast",
-  "name": "Breakfast",
-  "displayName": "Sarapan",
-  "icon": "☀️",
-  "order": 1,
-  "isDefault": true,
-  "createdAt": 1734048000000
-}
-```
-
----
-
-#### **5. `user_categories/{userId}/categories/{categoryId}`**
-```typescript
-{
-  id: string;
-  name: string;
-  displayName: string;
-  createdAt: number;
-}
-```
-
----
-
-#### **6. `meal_plans/{userId}/plans/{dateKey}`**
-```typescript
-{
-  date: string;           // Format: "YYYY-MM-DD"
-  breakfast?: {
-    recipeId: string;
-    title: string;
-    imageUrl: string;
-  };
-  lunch?: {
-    recipeId: string;
-    title: string;
-    imageUrl: string;
-  };
-  dinner?: {
-    recipeId: string;
-    title: string;
-    imageUrl: string;
-  };
-  updatedAt: number;
-}
-```
-
-**Example Document:**
-```json
-// Document ID: 2024-12-17
-{
-  "date": "2024-12-17",
-  "breakfast": {
-    "recipeId": "abc123",
-    "title": "Smoothie Bowl",
-    "imageUrl": "https://..."
-  },
-  "lunch": {
-    "recipeId": "def456",
-    "title": "Nasi Goreng",
-    "imageUrl": "https://..."
-  },
-  "updatedAt": 1734393600000
-}
+quickmenu-app-default-rtdb/
+├── recipes/                              # Public QuickMenu recipes (read-only)
+│   └── {recipeId}/
+│       ├── title: string
+│       ├── duration: number
+│       ├── ingredients: string           # HTML format
+│       ├── steps: string                 # HTML format
+│       ├── imageUrl: string
+│       ├── categories: string[]          # ["breakfast", "healthy"]
+│       ├── source: "QuickMenu"
+│       ├── createdBy: "admin"
+│       └── createdAt: string             # ISO timestamp
+│
+├── user_recipes/                         # User custom recipes
+│   └── {userId}/
+│       └── {recipeId}/
+│           ├── userId: string
+│           ├── title: string
+│           ├── duration: string
+│           ├── ingredients: string       # HTML format
+│           ├── steps: string             # HTML format
+│           ├── imageUrl: string | null
+│           ├── imagePublicId: string     # Cloudinary ID
+│           ├── categories: string[]
+│           ├── source: string            # "Manual" | "Instagram" | "Web" | etc.
+│           ├── originalUrl?: string
+│           ├── createdAt: number
+│           └── updatedAt: number
+│
+├── user_bookmarks/                       # User bookmarks
+│   └── {userId}/
+│       └── {recipeId}/
+│           ├── recipeId: string
+│           └── bookmarkedAt: number
+│
+├── categories/                           # Default categories (read-only)
+│   └── {categoryId}/
+│       ├── id: string
+│       ├── name: string
+│       ├── displayName: string
+│       ├── icon: string
+│       ├── order: number
+│       ├── isDefault: boolean
+│       └── createdAt: number
+│
+├── user_categories/                      # User custom categories
+│   └── {userId}/
+│       └── {categoryId}/
+│           ├── id: string
+│           ├── name: string
+│           ├── displayName: string
+│           ├── color: string
+│           ├── isDefault: false
+│           ├── userId: string
+│           └── createdAt: number
+│
+├── user_meal_plans/                      # User meal plans
+│   └── {userId}/
+│       └── {dateKey}/                    # Format: "YYYY-MM-DD"
+│           ├── date: string
+│           ├── timestamp: number
+│           ├── breakfast?:
+│           │   ├── recipeId: string
+│           │   ├── title: string
+│           │   └── imageUrl: string
+│           ├── lunch?:
+│           │   ├── recipeId: string
+│           │   ├── title: string
+│           │   └── imageUrl: string
+│           └── dinner?:
+│               ├── recipeId: string
+│               ├── title: string
+│               └── imageUrl: string
+│
+└── users/                                # User profiles
+    └── {userId}/
+        ├── uid: string
+        ├── fullName: string
+        ├── email: string
+        └── createdAt: number
 ```
 
 ---
 
 ### **Seeding Initial Data**
 
-#### **Seed Default Categories:**
+Import the combined JSON file via Firebase Console → Realtime Database → **⋮** → **Import JSON**.
 
-Via Firebase Console → Firestore → `categories` collection:
+The JSON file should contain both `recipes` and `categories` in a single file to avoid overwriting:
 
-```javascript
-// breakfast
+```json
 {
-  id: "breakfast",
-  name: "Breakfast",
-  displayName: "Sarapan",
-  icon: "☀️",
-  order: 1,
-  isDefault: true,
-  createdAt: Date.now()
-}
-
-// lunch
-{
-  id: "lunch",
-  name: "Lunch",
-  displayName: "Makan Siang",
-  icon: "🍱",
-  order: 2,
-  isDefault: true,
-  createdAt: Date.now()
-}
-
-// dinner
-{
-  id: "dinner",
-  name: "Dinner",
-  displayName: "Makan Malam",
-  icon: "🍽️",
-  order: 3,
-  isDefault: true,
-  createdAt: Date.now()
-}
-
-// snack
-{
-  id: "snack",
-  name: "Snack",
-  displayName: "Cemilan",
-  icon: "🍪",
-  order: 4,
-  isDefault: true,
-  createdAt: Date.now()
-}
-
-// healthy
-{
-  id: "healthy",
-  name: "Healthy",
-  displayName: "Sehat",
-  icon: "🥗",
-  order: 5,
-  isDefault: true,
-  createdAt: Date.now()
-}
-
-// quick
-{
-  id: "quick",
-  name: "Quick",
-  displayName: "Cepat",
-  icon: "⚡",
-  order: 6,
-  isDefault: true,
-  createdAt: Date.now()
+  "recipes": {
+    "recipe_001": {
+      "title": "Nasi Goreng Special",
+      "duration": 25,
+      "ingredients": "<ul><li>Nasi putih 2 piring</li><li>Telur 2 butir</li>...</ul>",
+      "steps": "<ol><li>Panaskan minyak di wajan</li>...</ol>",
+      "imageUrl": "https://images.unsplash.com/...",
+      "categories": ["lunch", "quick"],
+      "source": "QuickMenu",
+      "createdBy": "admin",
+      "createdAt": "2025-12-16T05:27:01Z"
+    }
+  },
+  "categories": {
+    "breakfast": {
+      "id": "breakfast",
+      "name": "Breakfast",
+      "displayName": "Sarapan",
+      "icon": "☀️",
+      "order": 1,
+      "isDefault": true,
+      "createdAt": 1734048000000
+    },
+    "lunch": {
+      "id": "lunch",
+      "name": "Lunch",
+      "displayName": "Makan Siang",
+      "icon": "🍱",
+      "order": 2,
+      "isDefault": true,
+      "createdAt": 1734048000000
+    },
+    "dinner": {
+      "id": "dinner",
+      "name": "Dinner",
+      "displayName": "Makan Malam",
+      "icon": "🍽️",
+      "order": 3,
+      "isDefault": true,
+      "createdAt": 1734048000000
+    },
+    "snack": {
+      "id": "snack",
+      "name": "Snack",
+      "displayName": "Cemilan",
+      "icon": "🍪",
+      "order": 4,
+      "isDefault": true,
+      "createdAt": 1734048000000
+    },
+    "healthy": {
+      "id": "healthy",
+      "name": "Healthy",
+      "displayName": "Sehat",
+      "icon": "🥗",
+      "order": 5,
+      "isDefault": true,
+      "createdAt": 1734048000000
+    },
+    "quick": {
+      "id": "quick",
+      "name": "Quick",
+      "displayName": "Cepat",
+      "icon": "⚡",
+      "order": 6,
+      "isDefault": true,
+      "createdAt": 1734048000000
+    }
+  }
 }
 ```
+
+> **⚠️ Penting:** Selalu import `recipes` dan `categories` dalam **satu file JSON** untuk menghindari data saling overwrite.
 
 ---
 
@@ -873,39 +801,21 @@ ifconfig
 
 ---
 
-#### **3. Firestore "Permission Denied"**
+#### **3. Realtime Database "Permission Denied"**
 
-**Problem:** Can't read/write to Firestore
+**Problem:** Can't read/write to Realtime Database
 
-**Solution:** Check Firestore Rules (see Configuration section)
+**Solution:** Check Realtime Database Rules (see Configuration section)
 
 **Verify:**
 ```bash
 # In Firebase Console
-Firestore → Rules → Make sure rules are published
+Realtime Database → Rules → Make sure rules are published
 ```
 
 ---
 
-#### **4. Firestore "Missing Index"**
-
-**Problem:** Query requires composite index
-
-**Solution:**
-1. Click the error link to auto-create index
-2. Wait 5-15 minutes
-3. Retry query
-
-**Or manually:**
-```bash
-Firebase Console → Firestore → Indexes → Create Index
-Collection: user_recipes
-Fields: userId (Ascending), createdAt (Descending)
-```
-
----
-
-#### **5. Image Upload Fails**
+#### **4. Image Upload Fails**
 
 **Problem:** Cloudinary upload error
 
@@ -918,7 +828,7 @@ Fields: userId (Ascending), createdAt (Descending)
 
 ---
 
-#### **6. Metro Bundler Port Conflict**
+#### **5. Metro Bundler Port Conflict**
 
 **Problem:** Port 8081 already in use
 
@@ -938,7 +848,7 @@ npx react-native start --port 8082
 
 ---
 
-#### **7. Gradle Build Failed (Android)**
+#### **6. Gradle Build Failed (Android)**
 
 **Problem:** Build fails with Gradle errors
 
@@ -955,7 +865,7 @@ npx react-native run-android
 
 ---
 
-#### **8. CocoaPods Error (iOS)**
+#### **7. CocoaPods Error (iOS)**
 
 **Problem:** Pod install fails
 
@@ -983,13 +893,13 @@ cd ..
 
 #### **Home Screen:**
 - [ ] Dynamic greeting displays correctly
-- [ ] Daily menu loads from Firestore
+- [ ] Daily menu loads from Realtime Database
 - [ ] Inspiration recipes load
 - [ ] Search navigation works
 - [ ] Bookmark toggle works
 
 #### **Explore Screen:**
-- [ ] Recipes load from Firestore
+- [ ] Recipes load from Realtime Database
 - [ ] Search filters recipes
 - [ ] Category filters work
 - [ ] Bookmark toggle updates UI
@@ -1027,14 +937,14 @@ cd ..
 - [ ] Image picker works
 - [ ] Cloudinary upload works
 - [ ] HTML formatting works
-- [ ] Save to Firestore works
+- [ ] Save to Realtime Database works
 - [ ] Appears in collection
 
 #### **Import Recipe:**
 - [ ] URL validation works
 - [ ] Backend scraping works
 - [ ] Preview displays correctly
-- [ ] Save to Firestore works
+- [ ] Save to Realtime Database works
 - [ ] Source tracking works
 
 ---
@@ -1108,4 +1018,4 @@ For support, email your.email@example.com or open an issue in the repository.
 
 **Made with ❤️ and ☕ by Firman Yudistia**
 
-*Last Updated: December 17, 2025
+*Last Updated: March 10, 2026*
