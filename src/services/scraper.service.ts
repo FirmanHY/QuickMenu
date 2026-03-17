@@ -1,7 +1,7 @@
 
 import axios from "axios";
 
-const API_BASE_URL = "http://172.16.0.2:3000";
+const API_BASE_URL = "https://smiling-beryl-individualpersonalproject-9dc3c655.koyeb.app";
 
 export interface ScrapedRecipe {
     title: string;
