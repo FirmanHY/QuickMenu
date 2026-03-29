@@ -64,7 +64,7 @@ const AppNavigator = () => {
                     animation: "slide_from_right"
                 }}
             >
-                {user ? (
+                {user && user.emailVerified ? (
                     <>
                         <Stack.Screen
                             name="MainApp"

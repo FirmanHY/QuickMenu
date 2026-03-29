@@ -91,27 +91,31 @@ const RegisterScreen = () => {
             setErrors((prev) => ({ ...prev, [field]: undefined }));
     };
 
-    const handleRegister = async () => {
-        if (validate()) {
-            setIsLoading(true);
-            try {
-                await signUp(email, password, fullName);
+ const handleRegister = async () => {
+    if (validate()) {
+        setIsLoading(true);
+        try {
+            await signUp(email, password, fullName);
 
-                Toast.show("Registrasi Berhasil! Mengalihkan...", Toast.LONG);
-            } catch (error: any) {
-                let errorMsg = "Terjadi kesalahan saat registrasi.";
-                if (error.code === "auth/email-already-in-use") {
-                    errorMsg = "Email sudah terdaftar!";
-                } else if (error.code === "auth/invalid-email") {
-                    errorMsg = "Email tidak valid!";
-                }
-
-                Toast.show(errorMsg, Toast.LONG);
-            } finally {
-                setIsLoading(false);
+            // ✅ Beri tahu user untuk cek email, lalu redirect ke Login
+            Toast.show(
+                "Registrasi berhasil! Cek email kamu untuk verifikasi akun.",
+                Toast.LONG
+            );
+            navigation.navigate("Login");
+        } catch (error: any) {
+            let errorMsg = "Terjadi kesalahan saat registrasi.";
+            if (error.code === "auth/email-already-in-use") {
+                errorMsg = "Email sudah terdaftar!";
+            } else if (error.code === "auth/invalid-email") {
+                errorMsg = "Email tidak valid!";
             }
+            Toast.show(errorMsg, Toast.LONG);
+        } finally {
+            setIsLoading(false);
         }
-    };
+    }
+};
 
     const handleLoginLink = () => navigation.navigate("Login");
 

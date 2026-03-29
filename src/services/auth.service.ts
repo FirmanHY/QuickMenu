@@ -23,10 +23,13 @@ export const signUp = async (email: string, pass: string, fullName: string) => {
             createdAt: Date.now()
         };
 
-        // RTDB: set data langsung di path users/{uid}
-        await database()
-            .ref(`users/${user.uid}`)
-            .set(userData);
+        await database().ref(`users/${user.uid}`).set(userData);
+
+        // ✅ Kirim email verifikasi setelah register
+        await user.sendEmailVerification();
+
+        // Sign out dulu supaya user tidak langsung masuk sebelum verifikasi
+        await auth().signOut();
 
         return user;
     } catch (error: any) {
@@ -41,7 +44,17 @@ export const signIn = async (email: string, pass: string) => {
             email,
             pass
         );
-        return userCredential.user;
+        const user = userCredential.user;
+
+        // ✅ Blokir login jika email belum diverifikasi
+        if (!user.emailVerified) {
+            await auth().signOut(); // Paksa keluar
+            const error: any = new Error("Email belum diverifikasi.");
+            error.code = "auth/email-not-verified";
+            throw error;
+        }
+
+        return user;
     } catch (error: any) {
         console.error("SignIn Error:", error);
         throw error;
@@ -59,11 +72,7 @@ export const signOut = async () => {
 
 export const getUserProfile = async (uid: string) => {
     try {
-        // RTDB: ambil data dari path users/{uid}
-        const snapshot = await database()
-            .ref(`users/${uid}`)
-            .once("value");
-
+        const snapshot = await database().ref(`users/${uid}`).once("value");
         return snapshot.val();
     } catch (error) {
         console.error("Get User Profile Error:", error);

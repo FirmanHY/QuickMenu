@@ -53,29 +53,53 @@ const LoginScreen = () => {
         return valid;
     };
 
-    const handleLogin = async () => {
-        if (validate()) {
-            setIsLoading(true);
-            try {
-                await signIn(email, password);
+   const handleLogin = async () => {
+    if (validate()) {
+        setIsLoading(true);
+        try {
+            await signIn(email, password);
+            Toast.show("Login Berhasil!", Toast.SHORT);
+        } catch (error: any) {
+            let errorMsg = "Terjadi kesalahan. Coba lagi.";
 
-                Toast.show("Login Berhasil!", Toast.SHORT);
-            } catch (error: any) {
-                let errorMsg = "Email atau password salah.";
-                if (
-                    error.code === "auth/user-not-found" ||
-                    error.code === "auth/wrong-password"
-                ) {
-                    errorMsg = "Email atau password salah.";
-                } else if (error.code === "auth/too-many-requests") {
+            switch (error.code) {
+                // ✅ Email belum diverifikasi
+                case "auth/email-not-verified":
+                    errorMsg =
+                        "Email kamu belum diverifikasi. Cek inbox atau folder spam.";
+                    break;
+
+                // ✅ Akun tidak ditemukan
+                case "auth/user-not-found":
+                case "auth/invalid-email":
+                    errorMsg = "Akun tidak ditemukan. Periksa kembali email kamu.";
+                    break;
+
+                // ✅ Password salah
+                case "auth/wrong-password":
+                    errorMsg = "Password salah. Coba lagi.";
+                    break;
+
+                // Firebase terbaru menggabungkan 2 error di atas jadi satu
+                case "auth/invalid-credential":
+                    errorMsg = "Email atau password tidak valid.";
+                    break;
+
+                case "auth/too-many-requests":
                     errorMsg = "Terlalu banyak percobaan. Coba lagi nanti.";
-                }
-                Toast.show(errorMsg, Toast.LONG);
-            } finally {
-                setIsLoading(false);
+                    break;
+
+                case "auth/user-disabled":
+                    errorMsg = "Akun ini telah dinonaktifkan.";
+                    break;
             }
+
+            Toast.show(errorMsg, Toast.LONG);
+        } finally {
+            setIsLoading(false);
         }
-    };
+    }
+};
 
     const handleEmailChange = (text: string) => {
         setEmail(text);
