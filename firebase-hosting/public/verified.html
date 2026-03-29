@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email Verified - QuickMenu</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #70b9be 0%, #4a9aa0 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 24px;
+        padding: 48px 36px;
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      }
+
+      .icon-wrapper {
+        width: 80px;
+        height: 80px;
+        background: #e8f5f6;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+      }
+
+      .icon-wrapper svg {
+        width: 40px;
+        height: 40px;
+        color: #70b9be;
+      }
+
+      h1 {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 12px;
+      }
+
+      p {
+        font-size: 15px;
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 8px;
+      }
+
+      .status {
+        margin: 28px 0;
+        padding: 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .status.loading {
+        background: #f0f9fa;
+        color: #4a9aa0;
+      }
+
+      .status.success {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+
+      .status.error {
+        background: #fdecea;
+        color: #c62828;
+      }
+
+      .btn {
+        display: inline-block;
+        background: #70b9be;
+        color: white;
+        padding: 14px 32px;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        width: 100%;
+        margin-top: 8px;
+        transition: background 0.2s;
+      }
+
+      .btn:hover {
+        background: #4a9aa0;
+      }
+
+      .btn-outline {
+        background: transparent;
+        color: #70b9be;
+        border: 2px solid #70b9be;
+        margin-top: 12px;
+      }
+
+      .btn-outline:hover {
+        background: #f0f9fa;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #70b9be33;
+        border-top-color: #70b9be;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="icon-wrapper">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      </div>
+
+      <h1>Email Terverifikasi! 🎉</h1>
+      <p>Akun QuickMenu kamu berhasil diverifikasi.</p>
+      <p>Membuka aplikasi secara otomatis...</p>
+
+      <div class="status loading" id="statusBox">
+        <span class="spinner"></span>
+        Mengalihkan ke QuickMenu...
+      </div>
+
+      <button class="btn hidden" id="btnOpenApp" onclick="openApp()">
+        Buka QuickMenu
+      </button>
+
+      <button class="btn btn-outline hidden" id="btnRetry" onclick="openApp()">
+        Coba Lagi
+      </button>
+    </div>
+
+    <script>
+      const DEEP_LINK = "quickmenu://email-verified";
+      const FALLBACK_DELAY = 2500;
+      let attemptCount = 0;
+
+      function openApp() {
+        attemptCount++;
+        document.getElementById("statusBox").className = "status loading";
+        document.getElementById("statusBox").innerHTML =
+          '<span class="spinner"></span>Membuka QuickMenu...';
+        document.getElementById("btnOpenApp").classList.add("hidden");
+        document.getElementById("btnRetry").classList.add("hidden");
+
+        // Coba buka deep link
+        window.location.href = DEEP_LINK;
+
+        // Kalau setelah beberapa detik masih di browser, tampilkan tombol manual
+        setTimeout(() => {
+          if (document.visibilityState !== "hidden") {
+            if (attemptCount >= 2) {
+              document.getElementById("statusBox").className = "status error";
+              document.getElementById("statusBox").innerHTML =
+                "Tidak bisa membuka app secara otomatis. Silakan buka QuickMenu secara manual lalu login.";
+            } else {
+              document.getElementById("statusBox").className = "status success";
+              document.getElementById("statusBox").innerHTML =
+                "✓ Verifikasi berhasil! Ketuk tombol di bawah jika app tidak terbuka.";
+              document
+                .getElementById("btnOpenApp")
+                .classList.remove("hidden");
+              document
+                .getElementById("btnRetry")
+                .classList.remove("hidden");
+            }
+          }
+        }, FALLBACK_DELAY);
+      }
+
+      // Auto redirect saat halaman dibuka
+      window.addEventListener("load", () => {
+        setTimeout(openApp, 800);
+      });
+
+      // Kalau user kembali ke browser setelah app terbuka
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && attemptCount > 0) {
+          document.getElementById("statusBox").className = "status success";
+          document.getElementById("statusBox").innerHTML =
+            "✓ Verifikasi berhasil! Silakan login di QuickMenu.";
+          document.getElementById("btnOpenApp").classList.remove("hidden");
+          document.getElementById("btnRetry").classList.add("hidden");
+        }
+      });
+    </script>
+  </body>
+</html>

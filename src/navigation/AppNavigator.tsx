@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, ActivityIndicator, Image, Text } from "react-native";
+import { View, ActivityIndicator, Image, Text, Linking } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import auth from "@react-native-firebase/auth";
@@ -49,6 +49,35 @@ const AppNavigator = () => {
         });
 
         return subscriber;
+    }, []);
+
+       useEffect(() => {
+        const handleDeepLink = async (event: { url: string }) => {
+            if (event.url === "quickmenu://email-verified") {
+                // Reload user untuk update status emailVerified
+                const currentUser = auth().currentUser;
+                if (currentUser) {
+                    await currentUser.reload();
+                    setUser(auth().currentUser);
+                }
+            }
+        };
+
+        const subscription = Linking.addEventListener("url", handleDeepLink);
+
+        // ✅ Tangkap deep link saat app dibuka dari killed state
+        Linking.getInitialURL().then((url) => {
+            if (url === "quickmenu://email-verified") {
+                const currentUser = auth().currentUser;
+                if (currentUser) {
+                    currentUser.reload().then(() => {
+                        setUser(auth().currentUser);
+                    });
+                }
+            }
+        });
+
+        return () => subscription.remove();
     }, []);
 
     if (initializing) {

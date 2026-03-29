@@ -10,10 +10,7 @@ export interface UserData {
 
 export const signUp = async (email: string, pass: string, fullName: string) => {
     try {
-        const userCredential = await auth().createUserWithEmailAndPassword(
-            email,
-            pass
-        );
+        const userCredential = await auth().createUserWithEmailAndPassword(email, pass);
         const user = userCredential.user;
 
         const userData: UserData = {
@@ -25,12 +22,13 @@ export const signUp = async (email: string, pass: string, fullName: string) => {
 
         await database().ref(`users/${user.uid}`).set(userData);
 
-        // ✅ Kirim email verifikasi setelah register
-        await user.sendEmailVerification();
+        // ✅ Kirim verifikasi dengan continueUrl ke deep link app
+        await user.sendEmailVerification({
+            url: "https://pejoy-84f2e.web.app/verified.html", // deep link ke app
+            handleCodeInApp: false,             // verifikasi di browser dulu, lalu redirect ke app
+        });
 
-        // Sign out dulu supaya user tidak langsung masuk sebelum verifikasi
         await auth().signOut();
-
         return user;
     } catch (error: any) {
         console.error("SignUp Error:", error);
